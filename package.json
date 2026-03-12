@@ -1,0 +1,28 @@
+{
+  "name": "nauvvi-ton-ai-marketplace",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Telegram-native AI Creator Toolkit on TON",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,bot,web -c blue,green,magenta \"npm run dev -w @nauvvi/api\" \"npm run dev -w @nauvvi/bot\" \"npm run dev -w @nauvvi/web\"",
+    "build": "npm run build -w @nauvvi/shared && npm run build -w @nauvvi/api && npm run build -w @nauvvi/bot && npm run build -w @nauvvi/web",
+    "lint": "npm run lint -ws --if-present",
+    "format": "prettier --write .",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "tsx scripts/seed.ts",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "prettier": "^3.3.3",
+    "prisma": "^5.18.0",
+    "tsx": "^4.17.1",
+    "typescript": "^5.6.2"
+  }
+}
