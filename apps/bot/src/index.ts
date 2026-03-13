@@ -22,6 +22,10 @@ if (!token) throw new Error('TELEGRAM_BOT_TOKEN is required');
 
 const bot = new Bot(token);
 
+bot.catch((err) => {
+  console.error('Bot error:', err);
+});
+
 function mainMenu() {
   const webAppUrl = process.env.WEB_BASE_URL || 'http://localhost:5173';
 
@@ -33,13 +37,175 @@ function mainMenu() {
     .url('Support', process.env.TELEGRAM_SUPPORT_URL || 'https://t.me');
 }
 
+function escapeHtml(value: string) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
+
+function renderResult(order: any) {
+  const out = order.outputJson || {};
+  const serviceCode = order.service?.code;
+
+  if (serviceCode === 'telegram-launch-pack') {
+    const titles = Array.isArray(out.titles) ? out.titles.map((t: string) => `• ${escapeHtml(t)}`).join('\n') : '—';
+    const posts = Array.isArray(out.posts)
+      ? out.posts.map((p: string, i: number) => `${i + 1}. ${escapeHtml(p)}`).join('\n\n')
+      : '—';
+    const hooks = Array.isArray(out.hooks) ? out.hooks.map((h: string) => `• ${escapeHtml(h)}`).join('\n') : '—';
+    const hashtags = Array.isArray(out.hashtags) ? out.hashtags.map((h: string) => escapeHtml(h)).join(' ') : '—';
+    const cta = out.cta ? escapeHtml(out.cta) : '—';
+
+    return [
+      `✅ <b>${escapeHtml(order.service.title)} is ready</b>`,
+      `Order: <b>${escapeHtml(order.publicOrderNo)}</b>`,
+      '',
+      '🔥 <b>Titles</b>',
+      titles,
+      '',
+      '✍️ <b>Launch Posts</b>',
+      posts,
+      '',
+      '⚡ <b>Hooks</b>',
+      hooks,
+      '',
+      `🎯 <b>CTA</b>\n${cta}`,
+      '',
+      `# <b>Hashtags</b>\n${hashtags}`,
+    ].join('\n');
+  }
+
+  if (serviceCode === 'telegram-post-pack') {
+    const titles = Array.isArray(out.titles) ? out.titles.map((t: string) => `• ${escapeHtml(t)}`).join('\n') : '—';
+    const posts = Array.isArray(out.posts)
+      ? out.posts.map((p: string, i: number) => `${i + 1}. ${escapeHtml(p)}`).join('\n\n')
+      : '—';
+    const hooks = Array.isArray(out.hooks) ? out.hooks.map((h: string) => `• ${escapeHtml(h)}`).join('\n') : '—';
+
+    return [
+      `✅ <b>${escapeHtml(order.service.title)} is ready</b>`,
+      `Order: <b>${escapeHtml(order.publicOrderNo)}</b>`,
+      '',
+      '🔥 <b>Titles</b>',
+      titles,
+      '',
+      '✍️ <b>Post Variants</b>',
+      posts,
+      '',
+      '⚡ <b>Hooks</b>',
+      hooks,
+    ].join('\n');
+  }
+
+  if (serviceCode === 'product-sales-pack') {
+    const benefits = Array.isArray(out.benefits)
+      ? out.benefits.map((b: string) => `• ${escapeHtml(b)}`).join('\n')
+      : '—';
+
+    return [
+      `✅ <b>${escapeHtml(order.service.title)} is ready</b>`,
+      `Order: <b>${escapeHtml(order.publicOrderNo)}</b>`,
+      '',
+      `🧩 <b>Short Description</b>\n${escapeHtml(out.shortDescription || '—')}`,
+      '',
+      `📄 <b>Full Description</b>\n${escapeHtml(out.fullDescription || '—')}`,
+      '',
+      `✅ <b>Benefits</b>\n${benefits}`,
+      '',
+      `🎯 <b>CTA</b>\n${escapeHtml(out.cta || '—')}`,
+    ].join('\n');
+  }
+
+  if (serviceCode === 'ad-copy-pack') {
+    const adCopies = Array.isArray(out.adCopies)
+      ? out.adCopies.map((a: string, i: number) => `${i + 1}. ${escapeHtml(a)}`).join('\n\n')
+      : '—';
+    const hooks = Array.isArray(out.hooks)
+      ? out.hooks.map((h: string) => `• ${escapeHtml(h)}`).join('\n')
+      : '—';
+    const ctas = Array.isArray(out.ctas)
+      ? out.ctas.map((c: string) => `• ${escapeHtml(c)}`).join('\n')
+      : '—';
+
+    return [
+      `✅ <b>${escapeHtml(order.service.title)} is ready</b>`,
+      `Order: <b>${escapeHtml(order.publicOrderNo)}</b>`,
+      '',
+      '📣 <b>Ad Copies</b>',
+      adCopies,
+      '',
+      '⚡ <b>Hooks</b>',
+      hooks,
+      '',
+      '🎯 <b>CTAs</b>',
+      ctas,
+    ].join('\n');
+  }
+
+  if (serviceCode === 'translate-localize') {
+    return [
+      `✅ <b>${escapeHtml(order.service.title)} is ready</b>`,
+      `Order: <b>${escapeHtml(order.publicOrderNo)}</b>`,
+      '',
+      `🌍 <b>Translation</b>\n${escapeHtml(out.translation || '—')}`,
+      '',
+      `🪄 <b>Localized Version</b>\n${escapeHtml(out.localizedVersion || '—')}`,
+      '',
+      `✨ <b>Alternative Version</b>\n${escapeHtml(out.alternativeVersion || '—')}`,
+    ].join('\n');
+  }
+
+  if (serviceCode === 'brand-starter-pack') {
+    const slogans = Array.isArray(out.slogans)
+      ? out.slogans.map((s: string) => `• ${escapeHtml(s)}`).join('\n')
+      : '—';
+
+    return [
+      `✅ <b>${escapeHtml(order.service.title)} is ready</b>`,
+      `Order: <b>${escapeHtml(order.publicOrderNo)}</b>`,
+      '',
+      `🧭 <b>Positioning</b>\n${escapeHtml(out.positioning || '—')}`,
+      '',
+      `💎 <b>Value Proposition</b>\n${escapeHtml(out.valueProposition || '—')}`,
+      '',
+      `🪧 <b>Slogans</b>\n${slogans}`,
+      '',
+      `🎙 <b>Tone of Voice</b>\n${escapeHtml(out.toneOfVoice || '—')}`,
+      '',
+      `📘 <b>Brand Bio</b>\n${escapeHtml(out.brandBio || '—')}`,
+    ].join('\n');
+  }
+
+  const bullets = Array.isArray(out.bullets)
+    ? out.bullets.map((b: string) => `• ${escapeHtml(b)}`).join('\n')
+    : '';
+
+  return [
+    `✅ <b>${escapeHtml(order.service.title)} is ready</b>`,
+    `Order: <b>${escapeHtml(order.publicOrderNo)}</b>`,
+    '',
+    escapeHtml(out.result || 'Your result is ready.'),
+    '',
+    bullets,
+  ].join('\n');
+}
+
 bot.command('start', async (ctx) => {
-  await upsertTelegramUser({
-    telegramId: String(ctx.from.id),
-    username: ctx.from.username,
-    firstName: ctx.from.first_name,
-    languageCode: ctx.from.language_code,
-  });
+  try {
+    await upsertTelegramUser({
+      telegramId: String(ctx.from.id),
+      username: ctx.from.username,
+      firstName: ctx.from.first_name,
+      languageCode: ctx.from.language_code,
+    });
+  } catch (error) {
+    console.error('Failed to upsert Telegram user:', error);
+    await ctx.reply(
+      'Backend is still starting. Please wait a few seconds and send /start again.',
+    );
+    return;
+  }
 
   resetSession(String(ctx.chat.id));
   await ctx.reply(renderWelcome(), {
@@ -68,11 +234,12 @@ bot.command('orders', async (ctx) => {
     return;
   }
 
-  const lines = orders
+  const keyboard = new InlineKeyboard();
+  orders
     .slice(0, 10)
-    .map((order: any) => `#${order.publicOrderNo} · ${order.service.title} · ${order.status}`);
+    .forEach((order: any) => keyboard.text(order.publicOrderNo, `order:${order.id}`).row());
 
-  await ctx.reply(lines.join('\n'));
+  await ctx.reply('Your recent orders:', { reply_markup: keyboard });
 });
 
 bot.callbackQuery('menu:services', async (ctx) => {
@@ -137,13 +304,59 @@ bot.callbackQuery(/order:(.+)/, async (ctx) => {
   await ctx.answerCallbackQuery();
 
   const order = await getOrder(ctx.match[1]);
+
+  let replyMarkup: InlineKeyboard | undefined;
+
+  if (order.status === 'AwaitingPayment' || order.status === 'PaymentPending') {
+    const existingIntent =
+      order.paymentIntents?.find((intent: any) => intent.status !== 'Confirmed') || null;
+
+    const paymentIntent = existingIntent || (await createPaymentIntent(order.id));
+
+    const payUrl =
+      `${process.env.WEB_BASE_URL || 'http://localhost:5173'}` +
+      `?orderId=${order.id}&paymentIntentId=${paymentIntent.id}&telegramId=${ctx.from.id}`;
+
+    replyMarkup = new InlineKeyboard()
+      .webApp('Pay in TON', payUrl)
+      .text('My Orders', 'menu:orders');
+  } else if (order.status === 'Completed') {
+    replyMarkup = new InlineKeyboard()
+      .text('View Result', `result:${order.id}`)
+      .row()
+      .text('My Orders', 'menu:orders');
+  } else {
+    replyMarkup = new InlineKeyboard().text('My Orders', 'menu:orders');
+  }
+
   await ctx.reply(
     `<b>${order.service.title}</b>\n` +
       `Order: ${order.publicOrderNo}\n` +
       `Status: ${order.status}\n` +
       `Price: ${order.priceTon} TON`,
-    { parse_mode: 'HTML' },
+    {
+      parse_mode: 'HTML',
+      reply_markup: replyMarkup,
+    },
   );
+});
+
+bot.callbackQuery(/result:(.+)/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+
+  const order = await getOrder(ctx.match[1]);
+
+  if (order.status !== 'Completed' || !order.outputJson) {
+    await ctx.reply('Result is not ready yet.');
+    return;
+  }
+
+  const keyboard = new InlineKeyboard().text('My Orders', 'menu:orders');
+
+  await ctx.reply(renderResult(order), {
+    parse_mode: 'HTML',
+    reply_markup: keyboard,
+  });
 });
 
 bot.on('message:text', async (ctx) => {
@@ -198,8 +411,8 @@ bot.on('message:text', async (ctx) => {
   ].join('\n');
 
   const keyboard = new InlineKeyboard()
-  .webApp('Pay in TON', payUrl)
-  .text('My Orders', 'menu:orders');
+    .webApp('Pay in TON', payUrl)
+    .text('My Orders', 'menu:orders');
 
   await ctx.reply(summary, {
     parse_mode: 'HTML',

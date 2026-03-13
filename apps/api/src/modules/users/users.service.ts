@@ -5,7 +5,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async upsertTelegramUser(payload: { telegramId: string; username?: string; firstName?: string; languageCode?: string }) {
+  async upsertTelegramUser(payload: {
+    telegramId: string;
+    username?: string;
+    firstName?: string;
+    languageCode?: string;
+  }) {
     return this.prisma.user.upsert({
       where: { telegramId: payload.telegramId },
       update: {
@@ -25,7 +30,18 @@ export class UsersService {
   }
 
   async bindWallet(telegramId: string, walletAddress: string) {
-    return this.prisma.user.update({ where: { telegramId }, data: { walletAddress } });
+    return this.prisma.user.upsert({
+      where: { telegramId },
+      update: {
+        walletAddress,
+        lastSeenAt: new Date(),
+      },
+      create: {
+        telegramId,
+        walletAddress,
+        lastSeenAt: new Date(),
+      },
+    });
   }
 
   async getProfile(telegramId: string) {
