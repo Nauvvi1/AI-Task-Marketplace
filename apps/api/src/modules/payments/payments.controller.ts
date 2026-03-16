@@ -19,6 +19,10 @@ export class PaymentsController {
 
   @Post('confirm')
   confirm(@Body() dto: ConfirmPaymentDto) {
-    return this.paymentsService.confirmPayment(dto.paymentIntentId, dto.txHash);
+    return this.paymentsService.confirmPayment(
+      dto.paymentIntentId,
+      dto.boc,
+      dto.senderAddress,
+    );
   }
 }

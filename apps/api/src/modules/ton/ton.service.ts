@@ -1,20 +1,36 @@
 import { Injectable } from '@nestjs/common';
+import { beginCell, toNano } from '@ton/ton';
 
 @Injectable()
 export class TonService {
-  buildTonConnectPayload(params: { amountTon: number; destinationAddress: string; comment: string }) {
-    const nano = BigInt(Math.round(params.amountTon * 1_000_000_000));
-    const tonNetwork = process.env.TON_NETWORK === 'mainnet' ? '-239' : '-3';
+
+  buildTonConnectPayload(params: {
+    amountTon: number
+    destinationAddress: string
+    comment?: string
+  }) {
+
+    let payload: string | undefined;
+
+    if (params.comment) {
+
+      const cell = beginCell()
+        .storeUint(0, 32)
+        .storeStringTail(params.comment)
+        .endCell();
+
+      payload = cell.toBoc().toString('base64');
+    }
+
     return {
-      validUntil: Math.floor(Date.now() / 1000) + (Number(process.env.TON_PAYMENT_EXPIRY_MINUTES || '15') * 60),
-      network: tonNetwork,
+      validUntil: Math.floor(Date.now() / 1000) + 1800,
       messages: [
         {
           address: params.destinationAddress,
-          amount: nano.toString(),
-          payload: params.comment,
-        },
-      ],
+          amount: toNano(params.amountTon).toString(),
+          payload
+        }
+      ]
     };
   }
 }

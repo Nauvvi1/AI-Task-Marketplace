@@ -6,5 +6,13 @@ export class ConfirmPaymentDto {
 
   @IsOptional()
   @IsString()
+  boc?: string;
+
+  @IsOptional()
+  @IsString()
+  senderAddress?: string;
+
+  @IsOptional()
+  @IsString()
   txHash?: string;
 }

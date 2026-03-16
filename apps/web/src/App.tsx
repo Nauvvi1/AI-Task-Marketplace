@@ -164,25 +164,62 @@ export function App() {
 
   const confirmPayment = async () => {
     if (!paymentIntent || paymentDone || order?.status === 'Completed') return;
-
+  
     setBusy(true);
-
+  
     try {
+      const paymentMode = import.meta.env.VITE_TON_PAYMENT_MODE ?? 'demo';
+  
+      if (paymentMode === 'demo') {
+        setStatus('Demo payment confirmation in progress...');
+  
+        await api.post('/payments/confirm', {
+          paymentIntentId: paymentIntent.id,
+        });
+  
+        setPaymentDone(true);
+        await refreshOrderState();
+        return;
+      }
+  
       setStatus('Opening wallet confirmation...');
-
-      // MVP demo mode:
-      // await tonConnectUI.sendTransaction(paymentIntent.tonConnectPayload);
-
-      setStatus('Wallet approved. Confirming order...');
-
+  
+      const txResult = await tonConnectUI.sendTransaction(paymentIntent.tonConnectPayload);
+      console.log('txResult', txResult);
+  
+      setStatus('Transaction sent. Waiting for blockchain confirmation...');
+  
       await api.post('/payments/confirm', {
         paymentIntentId: paymentIntent.id,
+        boc: txResult?.boc,
+        senderAddress: wallet?.account?.address,
       });
-
+  
       setPaymentDone(true);
       await refreshOrderState();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Payment confirmation failed:', error);
+  
+      const message = String(error?.message || '');
+  
+      if (message.includes('Transaction has expired') && order?.id) {
+        try {
+          setStatus('Payment session expired. Refreshing payment session...');
+  
+          const { data: newIntent } = await api.post('/payments/intents', {
+            orderId: order.id,
+          });
+  
+          setPaymentIntent(newIntent);
+          setStatus('Payment session refreshed. Please press Confirm payment again.');
+          return;
+        } catch (refreshError) {
+          console.error('Failed to refresh payment intent:', refreshError);
+          setStatus('Payment session expired and could not be refreshed.');
+          return;
+        }
+      }
+  
       setStatus('Payment was canceled or failed.');
     } finally {
       setBusy(false);
