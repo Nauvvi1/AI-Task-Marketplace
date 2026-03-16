@@ -168,7 +168,7 @@ export function App() {
     setBusy(true);
   
     try {
-      const paymentMode = import.meta.env.VITE_TON_PAYMENT_MODE ?? 'demo';
+      const paymentMode = import.meta.env.TON_PAYMENT_MODE ?? 'demo';
   
       if (paymentMode === 'demo') {
         setStatus('Demo payment confirmation in progress...');

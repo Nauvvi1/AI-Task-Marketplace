@@ -4,7 +4,7 @@ import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { App } from './App';
 import './styles.css';
 
-const manifestUrl = `${import.meta.env.VITE_WEB_BASE_URL}/tonconnect-manifest.json`;
+const manifestUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/tonconnect-manifest.json`;
 
 console.log('manifestUrl =', manifestUrl);
 

@@ -27,7 +27,7 @@ bot.catch((err) => {
 });
 
 function mainMenu() {
-  const webAppUrl = process.env.WEB_BASE_URL || 'http://localhost:5173';
+  const webAppUrl = process.env.WEB_URL || 'http://localhost:5173';
 
   return new InlineKeyboard()
     .text('Services', 'menu:services')
@@ -314,7 +314,7 @@ bot.callbackQuery(/order:(.+)/, async (ctx) => {
     const paymentIntent = existingIntent || (await createPaymentIntent(order.id));
 
     const payUrl =
-      `${process.env.WEB_BASE_URL || 'http://localhost:5173'}` +
+      `${process.env.WEB_URL || 'http://localhost:5173'}` +
       `?orderId=${order.id}&paymentIntentId=${paymentIntent.id}&telegramId=${ctx.from.id}`;
 
     replyMarkup = new InlineKeyboard()
@@ -395,7 +395,7 @@ bot.on('message:text', async (ctx) => {
   session.orderId = order.id;
   const paymentIntent = await createPaymentIntent(order.id);
   const payUrl =
-    `${process.env.WEB_BASE_URL || 'http://localhost:5173'}` +
+    `${process.env.WEB_URL || 'http://localhost:5173'}` +
     `?orderId=${order.id}&paymentIntentId=${paymentIntent.id}&telegramId=${ctx.from.id}`;
 
   const summary = [
