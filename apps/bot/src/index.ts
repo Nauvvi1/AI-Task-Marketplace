@@ -11,6 +11,7 @@ import {
   createOrder,
   createPaymentIntent,
   getOrder,
+  getUserProfile,
   listOrders,
   upsertTelegramUser,
 } from './api';
@@ -22,12 +23,18 @@ if (!token) throw new Error('TELEGRAM_BOT_TOKEN is required');
 
 const bot = new Bot(token);
 
+const ORDERS_PER_PAGE = 5;
+
 bot.catch((err) => {
   console.error('Bot error:', err);
 });
 
+function getWebAppBaseUrl() {
+  return process.env.WEB_URL || 'http://localhost:5173';
+}
+
 function mainMenu() {
-  const webAppUrl = process.env.WEB_URL || 'http://localhost:5173';
+  const webAppUrl = getWebAppBaseUrl();
 
   return new InlineKeyboard()
     .text('Services', 'menu:services')
@@ -42,6 +49,97 @@ function escapeHtml(value: string) {
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;');
+}
+
+function buildOrdersKeyboard(
+  orders: any[],
+  page: number,
+  totalPages: number,
+) {
+  const keyboard = new InlineKeyboard();
+
+  orders.forEach((order: any) => {
+    keyboard.text(order.publicOrderNo, `order:${order.id}`).row();
+  });
+
+  keyboard.text('🛍 Services', 'menu:services').row();
+
+  if (totalPages > 1) {
+    if (page > 1) {
+      keyboard.text('⬅ Prev', `orders:page:${page - 1}`);
+    }
+    if (page < totalPages) {
+      keyboard.text('Next ➡', `orders:page:${page + 1}`);
+    }
+    keyboard.row();
+  }
+
+  keyboard.text('⬅ Main menu', 'menu:main');
+
+  return keyboard;
+}
+
+async function sendMainMenu(ctx: any) {
+  await ctx.reply(renderWelcome(), {
+    parse_mode: 'HTML',
+    reply_markup: mainMenu(),
+  });
+}
+
+async function sendServicesMessage(ctx: any) {
+  const keyboard = new InlineKeyboard();
+
+  for (const service of SERVICE_CATALOG) {
+    keyboard.text(`${service.emoji} ${service.title}`, `service:${service.code}`).row();
+  }
+
+  keyboard.text('⬅ Main menu', 'menu:main');
+
+  await ctx.reply(renderServices(), {
+    parse_mode: 'HTML',
+    reply_markup: keyboard,
+  });
+}
+
+async function sendOrdersMessage(ctx: any, page = 1, edit = false) {
+  const telegramId = String(ctx.from.id);
+  const result = await listOrders(telegramId, page, ORDERS_PER_PAGE);
+
+  const orders = Array.isArray(result) ? result : result.items || [];
+  const total = Array.isArray(result) ? result.length : result.total || 0;
+  const totalPages = Array.isArray(result)
+    ? Math.max(1, Math.ceil(result.length / ORDERS_PER_PAGE))
+    : Math.max(1, result.totalPages || Math.ceil(total / ORDERS_PER_PAGE) || 1);
+
+  const text = orders.length
+    ? `Your recent orders: (page ${page}/${totalPages})`
+    : 'No orders yet. Open Services and create your first order.';
+
+  const keyboard = orders.length
+    ? buildOrdersKeyboard(orders, page, totalPages)
+    : new InlineKeyboard()
+        .text('🛍 Services', 'menu:services')
+        .row()
+        .text('⬅ Main menu', 'menu:main');
+
+  if (edit) {
+    try {
+      await ctx.editMessageText(text, {
+        reply_markup: keyboard,
+      });
+      return;
+    } catch (error: any) {
+      const message = String(error?.message || '');
+      if (!message.includes('message is not modified')) {
+        throw error;
+      }
+      return;
+    }
+  }
+
+  await ctx.reply(text, {
+    reply_markup: keyboard,
+  });
 }
 
 function renderResult(order: any) {
@@ -208,69 +306,70 @@ bot.command('start', async (ctx) => {
   }
 
   resetSession(String(ctx.chat.id));
-  await ctx.reply(renderWelcome(), {
-    parse_mode: 'HTML',
-    reply_markup: mainMenu(),
-  });
+  await sendMainMenu(ctx);
 });
 
 bot.command('services', async (ctx) => {
-  const keyboard = new InlineKeyboard();
-  for (const service of SERVICE_CATALOG) {
-    keyboard.text(`${service.emoji} ${service.title}`, `service:${service.code}`).row();
-  }
-
-  await ctx.reply(renderServices(), {
-    parse_mode: 'HTML',
-    reply_markup: keyboard,
-  });
+  await sendServicesMessage(ctx);
 });
 
 bot.command('orders', async (ctx) => {
-  const orders = await listOrders(String(ctx.from.id));
+  await sendOrdersMessage(ctx, 1);
+});
 
-  if (!orders.length) {
-    await ctx.reply('No orders yet. Open Services and create your first order.');
-    return;
+bot.command('balance', async (ctx) => {
+  try {
+    const profile = await getUserProfile(String(ctx.from.id));
+
+    if (!profile?.walletAddress) {
+      await ctx.reply(
+        'No wallet connected yet. Open Wallet / Pay and connect your TON wallet.',
+        {
+          reply_markup: new InlineKeyboard()
+            .webApp('Wallet / Pay', getWebAppBaseUrl())
+            .row()
+            .text('⬅ Main menu', 'menu:main'),
+        },
+      );
+      return;
+    }
+
+    await ctx.reply(
+      `💼 <b>Your wallet</b>\n<code>${escapeHtml(profile.walletAddress)}</code>\n\nBalance command is enabled. On-chain balance lookup can be added next.`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: new InlineKeyboard().text('⬅ Main menu', 'menu:main'),
+      },
+    );
+  } catch (error) {
+    console.error('Failed to load balance:', error);
+    await ctx.reply('Failed to load wallet info.', {
+      reply_markup: new InlineKeyboard().text('⬅ Main menu', 'menu:main'),
+    });
   }
-
-  const keyboard = new InlineKeyboard();
-  orders
-    .slice(0, 10)
-    .forEach((order: any) => keyboard.text(order.publicOrderNo, `order:${order.id}`).row());
-
-  await ctx.reply('Your recent orders:', { reply_markup: keyboard });
 });
 
 bot.callbackQuery('menu:services', async (ctx) => {
   await ctx.answerCallbackQuery();
-
-  const keyboard = new InlineKeyboard();
-  for (const service of SERVICE_CATALOG) {
-    keyboard.text(`${service.emoji} ${service.title}`, `service:${service.code}`).row();
-  }
-
-  await ctx.reply(renderServices(), {
-    parse_mode: 'HTML',
-    reply_markup: keyboard,
-  });
+  await sendServicesMessage(ctx);
 });
 
 bot.callbackQuery('menu:orders', async (ctx) => {
   await ctx.answerCallbackQuery();
+  await sendOrdersMessage(ctx, 1);
+});
 
-  const orders = await listOrders(String(ctx.from.id));
-  if (!orders.length) {
-    await ctx.reply('No orders yet.');
-    return;
-  }
+bot.callbackQuery('menu:main', async (ctx) => {
+  await ctx.answerCallbackQuery();
+  resetSession(String(ctx.chat!.id));
+  await sendMainMenu(ctx);
+});
 
-  const keyboard = new InlineKeyboard();
-  orders
-    .slice(0, 10)
-    .forEach((order: any) => keyboard.text(order.publicOrderNo, `order:${order.id}`).row());
+bot.callbackQuery(/orders:page:(\d+)/, async (ctx) => {
+  await ctx.answerCallbackQuery();
 
-  await ctx.reply('Your recent orders:', { reply_markup: keyboard });
+  const page = Number(ctx.match[1] || '1');
+  await sendOrdersMessage(ctx, page, true);
 });
 
 bot.callbackQuery(/service:(.+)/, async (ctx) => {
@@ -289,6 +388,8 @@ bot.callbackQuery(/service:(.+)/, async (ctx) => {
   session.brief = {};
   session.currentStep = 0;
 
+  const keyboard = new InlineKeyboard().text('⬅ Main menu', 'menu:main');
+
   await ctx.reply(
     `${service.emoji} <b>${service.title}</b>\n` +
       `${service.description}\n\n` +
@@ -296,7 +397,10 @@ bot.callbackQuery(/service:(.+)/, async (ctx) => {
       `First question:\n` +
       `<b>${service.briefFields[0].label}</b>\n` +
       `${service.briefFields[0].placeholder}`,
-    { parse_mode: 'HTML' },
+    {
+      parse_mode: 'HTML',
+      reply_markup: keyboard,
+    },
   );
 });
 
@@ -314,19 +418,21 @@ bot.callbackQuery(/order:(.+)/, async (ctx) => {
     const paymentIntent = existingIntent || (await createPaymentIntent(order.id));
 
     const payUrl =
-      `${process.env.WEB_URL || 'http://localhost:5173'}` +
+      `${getWebAppBaseUrl()}` +
       `?orderId=${order.id}&paymentIntentId=${paymentIntent.id}&telegramId=${ctx.from.id}`;
 
     replyMarkup = new InlineKeyboard()
       .webApp('Pay in TON', payUrl)
-      .text('My Orders', 'menu:orders');
+      .row()
+      .text('My Orders', 'menu:orders')
   } else if (order.status === 'Completed') {
     replyMarkup = new InlineKeyboard()
       .text('View Result', `result:${order.id}`)
       .row()
-      .text('My Orders', 'menu:orders');
+      .text('My Orders', 'menu:orders')
   } else {
-    replyMarkup = new InlineKeyboard().text('My Orders', 'menu:orders');
+    replyMarkup = new InlineKeyboard()
+      .text('My Orders', 'menu:orders')
   }
 
   await ctx.reply(
@@ -351,7 +457,9 @@ bot.callbackQuery(/result:(.+)/, async (ctx) => {
     return;
   }
 
-  const keyboard = new InlineKeyboard().text('My Orders', 'menu:orders');
+  const keyboard = new InlineKeyboard()
+    .text('My Orders', 'menu:orders')
+    .text('⬅ Main menu', 'menu:main');
 
   await ctx.reply(renderResult(order), {
     parse_mode: 'HTML',
@@ -395,7 +503,7 @@ bot.on('message:text', async (ctx) => {
   session.orderId = order.id;
   const paymentIntent = await createPaymentIntent(order.id);
   const payUrl =
-    `${process.env.WEB_URL || 'http://localhost:5173'}` +
+    `${getWebAppBaseUrl()}` +
     `?orderId=${order.id}&paymentIntentId=${paymentIntent.id}&telegramId=${ctx.from.id}`;
 
   const summary = [
@@ -412,7 +520,9 @@ bot.on('message:text', async (ctx) => {
 
   const keyboard = new InlineKeyboard()
     .webApp('Pay in TON', payUrl)
-    .text('My Orders', 'menu:orders');
+    .row()
+    .text('My Orders', 'menu:orders')
+    .text('⬅ Main menu', 'menu:main');
 
   await ctx.reply(summary, {
     parse_mode: 'HTML',
@@ -422,5 +532,18 @@ bot.on('message:text', async (ctx) => {
   resetSession(chatId);
 });
 
-bot.start();
-console.log('Nauvvi bot started');
+async function bootstrap() {
+  await bot.api.setMyCommands([
+    { command: 'start', description: 'Open main menu' },
+    { command: 'orders', description: 'Show recent orders' },
+    { command: 'services', description: 'Browse available services' },
+  ]);
+
+  await bot.start();
+  console.log('Nauvvi bot started');
+}
+
+bootstrap().catch((error) => {
+  console.error('Failed to start bot:', error);
+  process.exit(1);
+});

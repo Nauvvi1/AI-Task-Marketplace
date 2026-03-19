@@ -75,12 +75,35 @@ export class OrdersService {
     });
   }
 
-  async listOrdersByTelegramId(telegramId: string) {
-    return this.prisma.order.findMany({
-      where: { user: { telegramId } },
-      orderBy: { createdAt: 'desc' },
-      include: { service: true, paymentIntents: true },
-    });
+  async listOrdersByTelegramId(
+    telegramId: string,
+    page = 1,
+    limit = 5,
+  ) {
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.max(1, Math.min(limit, 20));
+    const skip = (safePage - 1) * safeLimit;
+
+    const [items, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { user: { telegramId } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: safeLimit,
+        include: { service: true, paymentIntents: true },
+      }),
+      this.prisma.order.count({
+        where: { user: { telegramId } },
+      }),
+    ]);
+
+    return {
+      items,
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+    };
   }
 
   async getOrderById(orderId: string) {

@@ -40,7 +40,7 @@ export const SERVICE_CATALOG: ServiceDefinition[] = [
     shortDescription: 'Launch-ready content pack for channels and products.',
     description: 'Structured launch copy for Telegram creators, sellers, and product teams.',
     priceTon: 0.45,
-    etaSeconds: 60,
+    etaSeconds: 15,
     emoji: '🚀',
     hero: true,
     briefFields: [
@@ -58,7 +58,7 @@ export const SERVICE_CATALOG: ServiceDefinition[] = [
     shortDescription: 'A regular content pack for channel owners.',
     description: 'Fast content generation for ongoing Telegram posting.',
     priceTon: 0.35,
-    etaSeconds: 45,
+    etaSeconds: 10,
     emoji: '✍️',
     briefFields: [
       { key: 'topic', label: 'Topic', placeholder: 'What is the post about?', required: true, maxLength: 200 },
@@ -73,7 +73,7 @@ export const SERVICE_CATALOG: ServiceDefinition[] = [
     shortDescription: 'Structured selling copy for products and offers.',
     description: 'Useful for sellers, mini-shops, and product pages inside Telegram.',
     priceTon: 0.4,
-    etaSeconds: 60,
+    etaSeconds: 15,
     emoji: '🛍️',
     briefFields: [
       { key: 'productName', label: 'Product name', placeholder: 'Name of the product', required: true, maxLength: 200 },
@@ -88,7 +88,7 @@ export const SERVICE_CATALOG: ServiceDefinition[] = [
     shortDescription: 'Ad-ready copy with hooks and CTA.',
     description: 'A compact ad pack for Telegram promotions and acquisition campaigns.',
     priceTon: 0.35,
-    etaSeconds: 50,
+    etaSeconds: 10,
     emoji: '📣',
     briefFields: [
       { key: 'product', label: 'Product', placeholder: 'What are you promoting?', required: true, maxLength: 220 },
@@ -103,7 +103,7 @@ export const SERVICE_CATALOG: ServiceDefinition[] = [
     shortDescription: 'Translate and adapt text for a target audience.',
     description: 'Fast localization workflow for creators and product teams.',
     priceTon: 0.25,
-    etaSeconds: 40,
+    etaSeconds: 10,
     emoji: '🌍',
     briefFields: [
       { key: 'sourceText', label: 'Source text', placeholder: 'Paste the text here', required: true, maxLength: 2500 },
@@ -118,7 +118,7 @@ export const SERVICE_CATALOG: ServiceDefinition[] = [
     shortDescription: 'Fast brand positioning and messaging starter.',
     description: 'Useful for launches, new products, and channel positioning.',
     priceTon: 0.6,
-    etaSeconds: 70,
+    etaSeconds: 25,
     emoji: '🧠',
     briefFields: [
       { key: 'brandName', label: 'Brand name', placeholder: 'Name of the brand/project', required: true, maxLength: 140 },

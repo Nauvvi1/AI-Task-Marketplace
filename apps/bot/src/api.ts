@@ -5,7 +5,12 @@ const api = axios.create({
   timeout: 15000,
 });
 
-export async function upsertTelegramUser(payload: { telegramId: string; username?: string; firstName?: string; languageCode?: string }) {
+export async function upsertTelegramUser(payload: {
+  telegramId: string;
+  username?: string;
+  firstName?: string;
+  languageCode?: string;
+}) {
   const { data } = await api.post('/users/telegram', payload);
   return data;
 }
@@ -15,7 +20,11 @@ export async function listServices() {
   return data;
 }
 
-export async function createOrder(payload: { telegramId: string; serviceCode: string; input?: Record<string, string> }) {
+export async function createOrder(payload: {
+  telegramId: string;
+  serviceCode: string;
+  input?: Record<string, string>;
+}) {
   const { data } = await api.post('/orders', payload);
   return data;
 }
@@ -30,12 +39,23 @@ export async function createPaymentIntent(orderId: string) {
   return data;
 }
 
-export async function listOrders(telegramId: string) {
-  const { data } = await api.get('/orders', { params: { telegramId } });
+export async function listOrders(
+  telegramId: string,
+  page = 1,
+  limit = 5,
+) {
+  const { data } = await api.get('/orders', {
+    params: { telegramId, page, limit },
+  });
   return data;
 }
 
 export async function getOrder(orderId: string) {
   const { data } = await api.get(`/orders/${orderId}`);
+  return data;
+}
+
+export async function getUserProfile(telegramId: string) {
+  const { data } = await api.get(`/users/${telegramId}`);
   return data;
 }

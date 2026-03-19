@@ -27,7 +27,7 @@ export class TonService {
       messages: [
         {
           address: params.destinationAddress,
-          amount: toNano(params.amountTon).toString(),
+          amount: toNano(0.001).toString(),
           payload
         }
       ]

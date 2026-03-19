@@ -18,8 +18,16 @@ export class OrdersController {
   }
 
   @Get()
-  listOrders(@Query('telegramId') telegramId: string) {
-    return this.ordersService.listOrdersByTelegramId(telegramId);
+  listOrders(
+    @Query('telegramId') telegramId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.ordersService.listOrdersByTelegramId(
+      telegramId,
+      Number(page || 1),
+      Number(limit || 5),
+    );
   }
 
   @Get(':id')
