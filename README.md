@@ -1,34 +1,20 @@
-# Nauvvi — Telegram-native AI Creator Toolkit on TON
+# AI Task Marketplace
 
-Nauvvi is a hackathon-ready monorepo for a **Telegram-native AI service marketplace** where creators, sellers, and channel owners buy structured AI deliverables with **Toncoin** and receive results directly inside Telegram.
+Telegram bot + Telegram Mini App for buying AI content packs with TON.
 
-The product is intentionally designed around the TON AI Agent Hackathon framing:
+## What it does
 
-- **Telegram** is the interaction layer.
-- **AI** is the execution engine.
-- **TON** is the payments and trust layer.
+User flow:
 
-## What is included
+1. Open the bot in Telegram.
+2. Choose a service.
+3. Fill a short brief.
+4. Create an order.
+5. Open the Mini App and confirm payment in TON.
+6. Backend marks the payment, starts AI generation, and sends the result back to Telegram.
 
-- **apps/api** — NestJS backend with catalog, orders, payment intents, AI generation pipeline, BullMQ jobs, Prisma, admin endpoints.
-- **apps/bot** — grammY Telegram bot with service catalog, order wizard, order history, and payment handoff.
-- **apps/web** — React Telegram Mini App with TON Connect payment confirmation UX.
-- **packages/shared** — shared types, schemas, and service catalog metadata.
-- **prisma/** — Prisma schema for PostgreSQL.
-- **scripts/seed.ts** — demo catalog/user seed script.
-- **docs/** — submission notes, architecture notes, and demo plan.
+Included services:
 
-## Product scope
-
-### Hero use case
-A Telegram creator opens the bot, chooses **Telegram Launch Pack**, fills in a brief, pays in TON, and receives:
-- 3 launch posts
-- 5 headlines
-- 10 hooks
-- CTA block
-- hashtags
-
-### MVP services
 - Telegram Launch Pack
 - Telegram Post Pack
 - Product Sales Pack
@@ -36,32 +22,22 @@ A Telegram creator opens the bot, chooses **Telegram Launch Pack**, fills in a b
 - Translate & Localize
 - Brand Starter Pack
 
-## Architecture
+## Project structure
 
-```text
-Telegram User
-→ Telegram Bot (grammY)
-→ API (NestJS)
-→ Order Service
-→ Payment Service
-→ AI Service
-→ BullMQ Queue / Workers
-→ PostgreSQL / Redis
-→ Result delivery back into Telegram
-```
+- `apps/api` — NestJS API, Prisma, BullMQ, payment flow, AI generation
+- `apps/bot` — grammY Telegram bot
+- `apps/web` — Vite React Mini App with TON Connect
+- `packages/shared` — shared catalog and types
+- `prisma` — schema and migrations
 
-Mini App payment flow:
+## Requirements
 
-```text
-Telegram Bot
-→ Open Mini App with order + payment intent
-→ Connect wallet with TON Connect
-→ Confirm transaction
-→ Backend verifies/records payment
-→ Order moves to Paid → In Progress → Completed
-```
+- Node.js 20+
+- npm
+- Docker Desktop
+- ngrok
 
-## Quick start
+## Setup
 
 ### 1. Install dependencies
 
@@ -69,101 +45,186 @@ Telegram Bot
 npm install
 ```
 
-### 2. Copy env file
+### 2. Create env file
 
 ```bash
 cp .env.example .env
 ```
 
-Fill in:
-- `TELEGRAM_BOT_TOKEN`
-- `OPENAI_API_KEY` (optional for mock mode)
-- `TON_RECEIVER_ADDRESS`
-- `TON_MANIFEST_URL`
+Fill these values in `.env`:
 
-### 3. Start infra
+- `OPENAI_API_KEY`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_BOT_USERNAME`
+- `TELEGRAM_SUPPORT_URL`
+- `TON_RECEIVER_ADDRESS`
+
+## Local infrastructure
+
+Start Postgres and Redis:
 
 ```bash
-docker compose up -d
+npm run docker:up
 ```
 
-### 4. Generate Prisma client and migrate DB
+Redis is exposed on `6380`, so `REDIS_URL` should stay:
+
+```env
+REDIS_URL=redis://localhost:6380
+```
+
+## Database
+
+Generate Prisma client and apply migrations:
 
 ```bash
 npm run prisma:generate
 npm run prisma:migrate
-npm run build:shared
+```
+
+Optional demo seed:
+
+```bash
 npm run prisma:seed
 ```
 
-### 5. Start all apps
+## ngrok
+
+This project uses **two tunnels**:
+
+- `web` → `5173`
+- `api` → `3001`
+
+Example `ngrok.yml`:
+
+```yaml
+tunnels:
+  web:
+    proto: http
+    addr: 5173
+
+  api:
+    proto: http
+    addr: 3001
+```
+
+Start ngrok:
+
+```bash
+ngrok start --all
+```
+
+Then update `.env`:
+
+- `WEB_URL` = **web** ngrok URL
+- `VITE_WEB_BASE_URL` = **web** ngrok URL
+- `VITE_API_BASE_URL` = **api** ngrok URL
+
+Example:
+
+```env
+WEB_URL=https://your-web.ngrok-free.app
+VITE_WEB_BASE_URL=https://your-web.ngrok-free.app
+VITE_API_BASE_URL=https://your-api.ngrok-free.app
+```
+
+If ngrok URLs change, update `.env` and restart the apps.
+
+## Run
+
+You can run everything together:
 
 ```bash
 npm run dev
 ```
 
-Apps:
-- API: http://localhost:3001
-- Mini App: http://localhost:5173
-- Bot: long polling in local process
+Or separately:
 
-TON Connect mobile wallet testing
+```bash
+npm run dev -w @nauvvi/api
+npm run dev -w @nauvvi/bot
+npm run dev -w @nauvvi/web
+```
 
-TON Connect manifest must be publicly accessible over HTTPS at:
+Local ports:
 
-https://<YOUR_APP_URL>/tonconnect-manifest.json
+- API: `http://localhost:3001`
+- Web: `http://localhost:5173`
 
-For local desktop development, the Mini App can run on localhost.
-For mobile wallet testing with Tonkeeper, expose the Mini App through a public HTTPS tunnel such as ngrok or cloudflared, then set:
+## What to verify after start
 
-TON_MANIFEST_URL=https://your-public-url/tonconnect-manifest.json
-TON_CONNECT_RETURN_URL=https://t.me/your_bot
-TON_PAYMENT_SUCCESS_REDIRECT_URL=https://t.me/your_bot
+### API health
 
-TON Docs require the manifest to be publicly reachable by direct GET request, and note that local testing may use a public demo manifest if needed.
+Open:
 
-## Real vs demo payment mode
+```text
+http://localhost:3001/api/health
+```
 
-This repository includes a **working payment intent flow** and TON Connect handoff UX. For hackathon demo speed, payment confirmation supports two modes:
+### TON Connect manifest
 
-1. **Demo mode** — use the built-in admin/demo confirmation endpoint to mark the intent as paid after the wallet handoff. Fastest for local judging demos.
-2. **Real verification mode** — plug a TON indexer/provider into `TonVerificationService` to verify transactions against on-chain data tied to the expected recipient, amount, and order comment.
+Open:
 
-This design keeps the MVP practical while leaving a clean path to fully live verification.
+```text
+https://YOUR_API_NGROK/api/tonconnect-manifest.json
+```
 
-## AI generation mode
+### Web icon
 
-If `OPENAI_API_KEY` is not set, the API falls back to **demo content generation** with structured mock output, so the end-to-end flow still works during setup.
+Open:
 
-## Why this project fits the hackathon
+```text
+https://YOUR_WEB_NGROK/icon.png
+```
 
-- **Track 2**: user-facing AI agent inside Telegram.
-- **Meaningful TON integration**: TON payment is tied directly to order lifecycle.
-- **Practical use case**: creators and sellers buy structured AI work products.
-- **Working MVP architecture**: bot, backend, queue, wallet handoff, result delivery, order history.
+## Telegram bot commands
 
-## Demo checklist
+The bot sets these commands on startup:
 
-- Start bot
 - `/start`
-- Services → Telegram Launch Pack
-- Fill brief
-- Open Mini App payment screen
-- Connect wallet / confirm payment
-- Watch order status change
-- Receive completed result in Telegram
-- Open My Orders and review history
+- `/services`
+- `/orders`
 
-## Notes
+## Payment modes
 
-- `@ton/mcp` is intentionally left as a **future extension** instead of core MVP plumbing.
-- TON Connect is the primary wallet/auth/payment surface for this build.
-- This repo is built for **npm workspaces**, not pnpm.
+### Demo mode
 
-## Submission assets
+```env
+TON_PAYMENT_MODE=demo
+VITE_TON_PAYMENT_MODE=demo
+```
 
-See `docs/` for:
-- demo script
-- architecture notes
-- positioning notes
-- future roadmap
+Use this for the fastest local end-to-end test.
+
+### Onchain mode
+
+```env
+TON_PAYMENT_MODE=onchain
+VITE_TON_PAYMENT_MODE=onchain
+```
+
+Use this when confirming through TON Connect.
+
+## Main API routes
+
+- `GET /api/health`
+- `GET /api/catalog/services`
+- `POST /api/orders`
+- `GET /api/orders?telegramId=...&page=1&limit=5`
+- `GET /api/orders/:id`
+- `POST /api/payments/intents`
+- `GET /api/payments/intents/:id`
+- `POST /api/payments/confirm`
+- `POST /api/users/telegram`
+- `PATCH /api/users/:telegramId/wallet`
+- `GET /api/users/:telegramId`
+
+## Typical test flow
+
+1. Start the bot with `/start`.
+2. Open `Services`.
+3. Pick a service and answer the brief questions.
+4. Press `Pay in TON`.
+5. Confirm payment in the Mini App.
+6. Wait for the order to move to `Paid` → `InProgress` → `Completed`.
+7. Open `My Orders` and view the result.
