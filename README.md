@@ -2,6 +2,10 @@
 
 Telegram bot + Telegram Mini App for buying AI content packs with TON.
 
+## Demo Video
+
+https://www.youtube.com/watch?v=nb8ctFmV8QI
+
 ## What it does
 
 User flow:
@@ -92,8 +96,8 @@ npm run prisma:seed
 
 This project uses **two tunnels**:
 
-- `web` → `5173`
-- `api` → `3001`
+- `web` -> `5173`
+- `api` -> `3001`
 
 Example `ngrok.yml`:
 
@@ -157,25 +161,7 @@ Local ports:
 
 Open:
 
-```text
 http://localhost:3001/api/health
-```
-
-### TON Connect manifest
-
-Open:
-
-```text
-https://YOUR_API_NGROK/api/tonconnect-manifest.json
-```
-
-### Web icon
-
-Open:
-
-```text
-https://YOUR_WEB_NGROK/icon.png
-```
 
 ## Telegram bot commands
 
@@ -194,16 +180,12 @@ TON_PAYMENT_MODE=demo
 VITE_TON_PAYMENT_MODE=demo
 ```
 
-Use this for the fastest local end-to-end test.
-
 ### Onchain mode
 
 ```env
 TON_PAYMENT_MODE=onchain
 VITE_TON_PAYMENT_MODE=onchain
 ```
-
-Use this when confirming through TON Connect.
 
 ## Main API routes
 
@@ -226,5 +208,5 @@ Use this when confirming through TON Connect.
 3. Pick a service and answer the brief questions.
 4. Press `Pay in TON`.
 5. Confirm payment in the Mini App.
-6. Wait for the order to move to `Paid` → `InProgress` → `Completed`.
+6. Wait for the order to move to `Paid` -> `InProgress` -> `Completed`.
 7. Open `My Orders` and view the result.
